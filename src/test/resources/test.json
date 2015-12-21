@@ -1,0 +1,14 @@
+{
+  "userId": "{{user.id}}",
+  "userName": "{{user.name}}",
+  "lastVisit": "{{user.lastVisit | dateformat('yyyy-mm-dd')}}",
+  "tieba": {
+    "$foreach": {
+      "tieba in tiebaList": {
+        "id": "{{tieba.id}}",
+        "name": "{{tieba.name}}",
+        "level": "{{tieba.level}}"
+      }
+    }
+  }
+}
