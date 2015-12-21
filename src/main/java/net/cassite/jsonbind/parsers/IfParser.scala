@@ -26,14 +26,14 @@ class IfParser extends Parser {
   override def parse(current: JsValue, parsingContext: ParsingContext): JsValue = {
     assert(current.isInstanceOf[JsObject])
     val ifMap = current.asInstanceOf[JsObject].value
-    val ifKey = ifMap.keys.iterator.next()
+    val ifKey = ifMap("$if").asInstanceOf[JsObject].value.keys.iterator.next()
     val doAppend = parsingContext.parseExpression(ifKey) match {
       case JsBoolean(b) => b
       case JsString(str) => str.toBoolean
-      case _ => throw new IllegalArgumentException("if only takes booleans or 'true'/'false' strings")
+      case x => throw new IllegalArgumentException("if only takes booleans or 'true'/'false' strings, but got " + x)
     }
     if (doAppend)
-      parsingContext.doNext(ifMap(ifKey))
+      parsingContext.doNext(ifMap("$if").asInstanceOf[JsObject].value(ifKey))
     else
       null
   }

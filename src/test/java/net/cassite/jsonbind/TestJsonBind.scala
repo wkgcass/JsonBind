@@ -1,6 +1,6 @@
 package net.cassite.jsonbind
 
-import net.cassite.jsonbind.parsers.{MapAssemblingParser, ForeachParser, ValueParser}
+import net.cassite.jsonbind.parsers.{IfParser, MapAssemblingParser, ForeachParser, ValueParser}
 import net.cassite.jsonbind.plugins.VariablePlugin
 import net.cassite.jsonbind.views.JsValueView
 import org.scalatest.{FlatSpec, Matchers}
@@ -164,6 +164,36 @@ class TestJsonBind extends FlatSpec with Matchers {
 
     app.view("test") should be(new JsObject(Map("something" -> new JsArray(List(new JsObject(Map("a" -> new JsString("name"))), new JsObject(Map("b" -> new JsString("name"))), new JsObject(Map("c" -> new JsString("name"))))))))
     app.view("test2") should be(new JsObject(Map("something" -> new JsArray(List(new JsObject(Map("a" -> new JsNumber(1))), new JsObject(Map("b" -> new JsNumber(2))), new JsObject(Map("c" -> new JsNumber(3))))))))
+  }
+
+  "IfParser and VariablePlugin in App, calling app.view(...)" should "show only if the value is 'true'" in {
+    val app = new App(List(new IfParser), List(new VariablePlugin))
+    app.bind(JsValueView("test", Json.parse(
+      """{
+        |"root":{
+        |"if1":{
+        |"$if":{
+        |"{{bool}}":{
+        |"key1":"value1"
+        |}
+        |}
+        |},
+        |"if2":{
+        |"$if":{
+        |"{{bool2}}":{
+        |"key2":"value2"
+        |}
+        |}
+        |}
+        |}
+        |}
+      """.stripMargin))) {
+      $scope =>
+        $scope("bool") = true
+        $scope("bool2") = false
+    }
+
+    app.view("test") should be(JsObject(Map("root" -> JsObject(Map("if1" -> JsObject(Map("key1" -> JsString("value1"))))))))
   }
 }
 
