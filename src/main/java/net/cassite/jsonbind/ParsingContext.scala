@@ -42,10 +42,10 @@ class ParsingContext(val $scope: Scope, val appContext: AppContext) {
 
     for (m <- it;
          string = m.matched;
-         matched = string.substring(2, string.length - 2)
+         matched = string.substring(2, string.length - 2).trim
     ) {
       var last: JsValue = null
-      for (exp <- matched.split("\\|").map(s => s.trim)) {
+      for (exp <- matched.split("\\|").map(_.trim)) {
         val pluginContext = new PluginContext(exp, $scope, appContext)
         last = pluginContext.doNext(last)
       }

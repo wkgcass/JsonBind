@@ -1,7 +1,7 @@
 package net.cassite.jsonbind
 
 import net.cassite.jsonbind.parsers.{IfParser, MapAssemblingParser, ForeachParser, ValueParser}
-import net.cassite.jsonbind.plugins.VariablePlugin
+import net.cassite.jsonbind.plugins.{DateFormatPlugin, VariablePlugin}
 import net.cassite.jsonbind.views.JsValueView
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.libs.json._
@@ -39,7 +39,7 @@ class TestJsonBind extends FlatSpec with Matchers {
     app.view("test") should be(new JsObject(Map("name" -> new JsString("cass"), "lang" -> new JsString("scala"))))
   }
 
-  "ExpParser and VariablePlugin in App, calling app.view(...)" should "fill the {{variable}} with right value" in {
+  "ValueParser and VariablePlugin in App, calling app.view(...)" should "fill the {{variable}} with right value" in {
     val app = new App(List(new ValueParser), List(new VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """
@@ -89,6 +89,14 @@ class TestJsonBind extends FlatSpec with Matchers {
         val lang = new NameClass("scala")
         lang.anotherObj = new AnotherClass("another")
         $scope("lang") = lang
+    }.bind(JsValueView("test6", Json.parse(
+      """{
+        |"boolean":"{{true}}",
+        |"number":"{{1.0}}",
+        |"string":"{{'value'}}"
+        |}
+      """.stripMargin))) {
+      $scope =>
     }
 
     app.view("test") should be(new JsObject(Map("name" -> new JsString("cass"), "lang" -> new JsString("scala"))))
@@ -96,9 +104,10 @@ class TestJsonBind extends FlatSpec with Matchers {
     app.view("test3") should be(new JsObject(Map("name" -> new JsString("-cass-scala-"), "lang" -> new JsString("-scala-"))))
     app.view("test4") should be(new JsObject(Map("name" -> new JsString("cass"), "lang" -> new JsString("scala"))))
     app.view("test5") should be(new JsObject(Map("name" -> new JsString("cass"), "another" -> new JsString("another"), "lang" -> new JsString("scala"))))
+    app.view("test6") should be(new JsObject(Map("boolean" -> new JsBoolean(true), "number" -> new JsNumber(1.0), "string" -> JsString("value"))))
   }
 
-  "ForeachParser,ExpParser and VariablePlugin in App, calling app.view(...)" should "generate repeated values" in {
+  "ForeachParser,ValueParser and VariablePlugin in App, calling app.view(...)" should "generate repeated values" in {
     val app = new App(List(new ForeachParser, new ValueParser), List(new VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """{
@@ -117,7 +126,7 @@ class TestJsonBind extends FlatSpec with Matchers {
     app.view("test") should be(new JsObject(Map("something" -> new JsArray(List(new JsObject(Map("name" -> new JsString("a"))), new JsObject(Map("name" -> new JsString("b"))), new JsObject(Map("name" -> new JsString("c"))))))))
   }
 
-  "MapAssemblingParser,ExpParser and VariablePlugin in App, calling app.view(...)" should "fill the {{key}} with right value" in {
+  "MapAssemblingParser,ValueParser and VariablePlugin in App, calling app.view(...)" should "fill the {{key}} with right value" in {
     val app = new App(List(new MapAssemblingParser, new ValueParser), List(new VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """
@@ -134,7 +143,7 @@ class TestJsonBind extends FlatSpec with Matchers {
     app.view("test") should be(JsObject(Map("cass" -> JsString("name"), "scala" -> JsString("lang"))))
   }
 
-  "ForeachParser,MapAssemblingParser,ExpParser and VariablePlugin in App, calling app.view(...)" should "fill the {{key}} with right value" in {
+  "ForeachParser,MapAssemblingParser,ValueParser and VariablePlugin in App, calling app.view(...)" should "fill the {{key}} with right value" in {
     val app = new App(List(new ForeachParser, new MapAssemblingParser, new ValueParser), List(new VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """{
@@ -170,23 +179,23 @@ class TestJsonBind extends FlatSpec with Matchers {
     val app = new App(List(new IfParser), List(new VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """{
-        |"root":{
-        |"if1":{
-        |"$if":{
-        |"{{bool}}":{
-        |"key1":"value1"
-        |}
-        |}
-        |},
-        |"if2":{
-        |"$if":{
-        |"{{bool2}}":{
-        |"key2":"value2"
-        |}
-        |}
-        |}
-        |}
-        |}
+        |   "root":{
+        |      "if1":{
+        |           "$if":{
+        |              "{{bool}}":{
+        |                   "key1":"value1"
+        |              }
+        |           }
+        |      },
+        |      "if2":{
+        |          "$if":{
+        |             "{{bool2}}":{
+        |                  "key2":"value2"
+        |             }
+        |          }
+        |      }
+        |   }
+        | }
       """.stripMargin))) {
       $scope =>
         $scope("bool") = true
@@ -194,6 +203,20 @@ class TestJsonBind extends FlatSpec with Matchers {
     }
 
     app.view("test") should be(JsObject(Map("root" -> JsObject(Map("if1" -> JsObject(Map("key1" -> JsString("value1"))))))))
+  }
+
+  "ValueParser and VariablePlugin,DateFormatPlugin" should "fill the date with corresponding time" in {
+    val app = new App(List(new ValueParser), List(new VariablePlugin, new DateFormatPlugin))
+    app.bind(JsValueView("test", Json.parse(
+      """{
+        |"time":"{{timestamp | dateformat('yyyy/m/d HH:i:s')}}"
+        |}
+      """.stripMargin))) {
+      $scope =>
+        $scope("timestamp") = 1450760814000L
+    }
+
+    app.view("test") should be(JsObject(Map("time" -> JsString("2015/12/22 13:6:54"))))
   }
 }
 

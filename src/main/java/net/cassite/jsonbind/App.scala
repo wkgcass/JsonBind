@@ -46,6 +46,7 @@ object App {
     case s: String => new JsString(s)
     case i: Int => new JsNumber(i)
     case d: Double => new JsNumber(d)
+    case l: Long => new JsNumber(l)
     case b: Boolean => new JsBoolean(b)
     case seq: Seq[_] => new JsArray(seq.map(v => jsonValue(v)))
     case map: Map[_, _] => new JsObject(map.map(entry => (entry._1.toString, jsonValue(entry._2))))
