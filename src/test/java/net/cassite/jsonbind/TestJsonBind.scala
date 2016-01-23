@@ -1,8 +1,9 @@
 package net.cassite.jsonbind
 
 import net.cassite.jsonbind.parsers.{IfParser, MapAssemblingParser, ForeachParser, ValueParser}
-import net.cassite.jsonbind.plugins.{DateFormatPlugin, VariablePlugin}
+import net.cassite.jsonbind.plugins.{LogicOperatorPlugin, DateFormatPlugin, VariablePlugin}
 import net.cassite.jsonbind.views.JsValueView
+import net.cassite.jsonbind.views.InputStreamView
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.libs.json._
 
@@ -184,6 +185,9 @@ class TestJsonBind extends FlatSpec with Matchers {
         |           "$if":{
         |              "{{bool}}":{
         |                   "key1":"value1"
+        |              },
+        |              "$else":{
+        |                   "key1else":"value1else"
         |              }
         |           }
         |      },
@@ -191,8 +195,23 @@ class TestJsonBind extends FlatSpec with Matchers {
         |          "$if":{
         |             "{{bool2}}":{
         |                  "key2":"value2"
+        |             },
+        |             "$else":{
+        |                  "key2else":"value2else"
         |             }
         |          }
+        |      },
+        |      "if3":{
+        |          "$if":{
+        |             "{{bool3}}":{
+        |                 "key3":"value3"
+        |             }
+        |          }
+        |      },
+        |      "if4":{
+        |         "$if":{
+        |             "{{true}}":"value4"
+        |         }
         |      }
         |   }
         | }
@@ -200,9 +219,16 @@ class TestJsonBind extends FlatSpec with Matchers {
       $scope =>
         $scope("bool") = true
         $scope("bool2") = false
+        $scope("bool3") = false
     }
 
-    app.view("test") should be(JsObject(Map("root" -> JsObject(Map("if1" -> JsObject(Map("key1" -> JsString("value1"))))))))
+    app.view("test") should be(JsObject(Map("root" -> JsObject(
+      Map(
+        "if1" -> JsObject(Map("key1" -> JsString("value1"))),
+        "if2" -> JsObject(Map("key2else" -> JsString("value2else"))),
+        "if4" -> JsString("value4")
+      )
+    ))))
   }
 
   "ValueParser and VariablePlugin,DateFormatPlugin" should "fill the date with corresponding time" in {
@@ -218,6 +244,160 @@ class TestJsonBind extends FlatSpec with Matchers {
 
     app.view("test") should be(JsObject(Map("time" -> JsString("2015/12/22 13:6:54"))))
   }
+
+  "IfParser,ValueParser and LogicOperatorPlugin,VariablePlugin" should "give correct boolean value" in {
+    val app = new App(List(new IfParser, new ValueParser), List(new LogicOperatorPlugin, new VariablePlugin))
+    app.bind(JsValueView("test", Json.parse(
+      """{
+        |"==":"{{1==2}}",
+        |"!=":"{{1!=2}}",
+        |"<>":"{{1<>2}}",
+        |"!":"{{!false}}",
+        |"==2":"{{test1==test2}}",
+        |"if1":{
+        |   "$if":{
+        |      "{{!false}}":{
+        |          "key1":"value1"
+        |      },
+        |      "$else":{
+        |           "key2":"value2"
+        |       }
+        |   }
+        |}
+        |}
+      """.stripMargin
+    ))) {
+      $scope =>
+        $scope("test1") = 1
+        $scope("test2") = 1
+    }
+
+    app.view("test") should be(JsObject(
+      Map(
+        "==" -> JsBoolean(false),
+        "!=" -> JsBoolean(true),
+        "<>" -> JsBoolean(true),
+        "!" -> JsBoolean(true),
+        "==2" -> JsBoolean(true),
+        "if1" -> JsObject(Map("key1" -> JsString("value1")))
+      )))
+  }
+
+  "all parsers and all plugins" should "function properly" in {
+    val app = new App(List(new IfParser, new ForeachParser, new MapAssemblingParser, new ValueParser), List(new LogicOperatorPlugin, new VariablePlugin, new DateFormatPlugin))
+    app.bind(InputStreamView("test", classOf[TestJsonBind].getResourceAsStream("/test.json"))) {
+      $scope =>
+        $scope("user") = new User(1, "cass", 1450760814000L, true, 3, 2333)
+        $scope("zoneList") = List(
+          new Zone(1, "java", 13,
+            Map(
+              new Post(1, "hello world") -> new Author(2, "SGSLX"),
+              new Post(2, "water") -> new Author(3, "SM"),
+              new Post(3, "ji shu tie") -> new Author(1, "cass")
+            )
+          ),
+          new Zone(2, "macbook", 12,
+            Map(
+              new Post(4, "osx") -> new Author(4, "timo"),
+              new Post(5, "win vs osx") -> new Author(5, "john")
+            )
+          )
+        )
+    }
+    app.view("test") should be(
+      JsObject(
+        Map(
+          "userId" -> JsNumber(1),
+          "userName" -> JsString("cass"),
+          "lastVisit" -> JsString("2015-12-22"),
+          "vip" -> JsObject(
+            Map(
+              "vipLevel" -> JsNumber(3),
+              "vipExp" -> JsNumber(2333)
+            )
+          ),
+          "zones" -> JsArray(List(
+            JsObject(
+              Map(
+                "id" -> JsNumber(1),
+                "name" -> JsString("java"),
+                "level" -> JsNumber(13),
+                "posts" -> JsArray(List(
+                  JsObject(
+                    Map(
+                      "1" -> JsObject(
+                        Map(
+                          "title" -> JsString("hello world"),
+                          "author" -> JsObject(
+                            Map(
+                              "id" -> JsNumber(2),
+                              "name" -> JsString("SGSLX")
+                            )
+                          )
+                        )
+                      )
+                    )),
+                  JsObject(
+                    Map(
+                      "2" -> JsObject(
+                        Map(
+                          "title" -> JsString("water"),
+                          "author" -> JsObject(
+                            Map(
+                              "id" -> JsNumber(3),
+                              "name" -> JsString("SM")
+                            )
+                          )
+                        )
+                      )
+                    ))
+                ))
+              )
+            ),
+            JsObject(
+              Map(
+                "id" -> JsNumber(2),
+                "name" -> JsString("macbook"),
+                "level" -> JsNumber(12),
+                "posts" -> JsArray(List(
+                  JsObject(
+                    Map(
+                      "4" -> JsObject(
+                        Map(
+                          "title" -> JsString("osx"),
+                          "author" -> JsObject(
+                            Map(
+                              "id" -> JsNumber(4),
+                              "name" -> JsString("timo")
+                            )
+                          )
+                        )
+                      )
+                    )),
+                  JsObject(
+                    Map(
+                      "5" -> JsObject(
+                        Map(
+                          "title" -> JsString("win vs osx"),
+                          "author" -> JsObject(
+                            Map(
+                              "id" -> JsNumber(5),
+                              "name" -> JsString("john")
+                            )
+                          )
+                        )
+                      )
+                    ))
+                ))
+              )
+            )
+          ))
+        )
+      )
+    )
+
+    println(app.view("test"))
+  }
 }
 
 class NameClass(val name: String) {
@@ -227,3 +407,11 @@ class NameClass(val name: String) {
 }
 
 class AnotherClass(val value: String)
+
+class User(val id: Int, val name: String, val lastVisit: Long, val isVip: Boolean, val vipLevel: Int, val vipExp: Int)
+
+class Zone(val id: Int, val name: String, val level: Int, val posts: Map[Post, Author])
+
+class Post(val id: Int, val title: String)
+
+class Author(val id: Int, val name: String)

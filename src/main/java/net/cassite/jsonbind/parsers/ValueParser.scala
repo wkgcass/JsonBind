@@ -1,6 +1,7 @@
 package net.cassite.jsonbind.parsers
 
 import net.cassite.jsonbind.{App, Parser, ParsingContext, PluginContext}
+import org.slf4j.LoggerFactory
 import play.api.libs.json.{JsString, JsValue}
 
 /**
@@ -20,6 +21,13 @@ class ValueParser extends Parser {
 
   override def parse(current: JsValue, parsingContext: ParsingContext): JsValue = {
     assert(current.isInstanceOf[JsString])
-    parsingContext.parseExpression(current.asInstanceOf[JsString].value)
+
+    ValueParser.LOGGER.debug("ValueParser with JsValue:{}", current)
+
+    parsingContext.doNext(parsingContext.parseExpression(current.asInstanceOf[JsString].value))
   }
+}
+
+object ValueParser {
+  private val LOGGER = LoggerFactory.getLogger(classOf[ValueParser])
 }

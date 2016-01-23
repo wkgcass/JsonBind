@@ -2,12 +2,38 @@
   "userId": "{{user.id}}",
   "userName": "{{user.name}}",
   "lastVisit": "{{user.lastVisit | dateformat('yyyy-mm-dd')}}",
-  "tieba": {
+  "vip": {
+    "$if": {
+      "{{user.isVip}}": {
+        "vipLevel": "{{user.vipLevel}}",
+        "vipExp": "{{user.vipExp}}"
+      },
+      "$else": false
+    }
+  },
+  "zones": {
     "$foreach": {
-      "tieba in tiebaList": {
-        "id": "{{tieba.id}}",
-        "name": "{{tieba.name}}",
-        "level": "{{tieba.level}}"
+      "zone in zoneList": {
+        "id": "{{zone.id}}",
+        "name": "{{zone.name}}",
+        "level": "{{zone.level}}",
+        "posts": {
+          "$foreach": {
+            "(post,author) in zone.posts": {
+              "$if": {
+                "{{author.id!=user.id}}": {
+                  "{{post.id}}": {
+                    "title": "{{post.title}}",
+                    "author": {
+                      "id": "{{author.id}}",
+                      "name": "{{author.name}}"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

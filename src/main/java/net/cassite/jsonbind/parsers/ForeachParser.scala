@@ -1,6 +1,7 @@
 package net.cassite.jsonbind.parsers
 
 import net.cassite.jsonbind.{Scope, ParsingContext, Parser}
+import org.slf4j.LoggerFactory
 import play.api.libs.json.{JsArray, JsObject, JsValue}
 
 /**
@@ -35,6 +36,9 @@ class ForeachParser extends Parser {
 
   override def parse(current: JsValue, parsingContext: ParsingContext): JsValue = {
     assert(current.isInstanceOf[JsObject])
+
+    ForeachParser.LOGGER.debug("ForeachParser with JsValue:{}", current)
+
     val map = current.asInstanceOf[JsObject].value("$foreach").asInstanceOf[JsObject].value
     val foreachKey = map.keys.iterator.next()
     val XinY = foreachKey.split("in")
@@ -42,13 +46,15 @@ class ForeachParser extends Parser {
     val y = XinY(1).trim
     val loop = map(foreachKey)
 
+    ForeachParser.LOGGER.debug("--loop info : foreach({} in {}) {}", x, y, loop)
+
     val seq = if (x.startsWith("(") && x.endsWith(")")) {
       val vars = x.substring(1, x.length - 1).split(",").map(_.trim)
       if (vars.length == 2) {
         for (item <- parsingContext.$scope(y).asInstanceOf[Iterable[(_, _)]]) yield {
           val childScope = new Scope(parsingContext.$scope)
-          childScope(vars(0)) = item._1
-          childScope(vars(1)) = item._2
+          childScope(vars(0).trim) = item._1
+          childScope(vars(1).trim) = item._2
           val parsing = new ParsingContext(childScope, parsingContext.appContext)
           parsing.doNext(loop)
         }
@@ -63,4 +69,8 @@ class ForeachParser extends Parser {
     }
     parsingContext.doNext(new JsArray(seq.toSeq))
   }
+}
+
+object ForeachParser {
+  private val LOGGER = LoggerFactory.getLogger(classOf[ForeachParser])
 }

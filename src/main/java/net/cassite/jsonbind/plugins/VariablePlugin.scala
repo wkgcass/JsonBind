@@ -3,6 +3,7 @@ package net.cassite.jsonbind.plugins
 import java.util.NoSuchElementException
 
 import net.cassite.jsonbind.{App, Plugin, PluginContext}
+import org.slf4j.LoggerFactory
 import play.api.libs.json.{JsNumber, JsBoolean, JsString, JsValue}
 
 /**
@@ -17,46 +18,24 @@ class VariablePlugin extends Plugin {
   override def isAssignableFrom(func: String): Boolean = !func.contains("(")
 
   override def buildFunction(func: String, context: PluginContext): (JsValue) => JsValue = {
-    val strArr = func.split("\\.").map(_.trim)
-
-
-    val v = try {
-      val any = context.$scope(strArr(0))
-
-      var i = 0
-      def recursivelyGetValue(a: Any): Any = {
-        i = i + 1
-        if (strArr.length == i)
-          a
-        else {
-          val prop = strArr(i)
-          val getterName = "get" + prop.charAt(0).toUpper + prop.substring(1)
-
-          recursivelyGetValue(
-            try {
-              a.getClass.getMethod(getterName).invoke(a)
-            } catch {
-              case ex: NoSuchMethodException =>
-                val field = a.getClass.getDeclaredField(prop)
-                field.setAccessible(true)
-                field.get(a)
-            })
+    val str = func.trim
+    val v = if (str.startsWith("'") && str.endsWith("'") && str.length >= 2) {
+      JsString(str.substring(1, str.length - 1))
+    } else {
+      try {
+        JsBoolean(str.toBoolean)
+      } catch {
+        case _: Throwable => try {
+          JsNumber(str.toDouble)
+        } catch {
+          case _: Throwable => App.jsonValue(context.$scope(func.trim))
         }
       }
-      App.jsonValue(recursivelyGetValue(any))
-    } catch {
-      case _: NoSuchElementException =>
-        val str = strArr(0)
-        if (str.startsWith("'") && str.endsWith("'") && str.length >= 2) {
-          JsString(str.substring(1, str.length - 1))
-        } else {
-          try {
-            JsBoolean(str.toBoolean)
-          } catch {
-            case _: Throwable => JsNumber(str.toDouble)
-          }
-        }
     }
     (x: JsValue) => v
   }
+}
+
+object VariablePlugin {
+  private val LOGGER = LoggerFactory.getLogger(classOf[VariablePlugin])
 }
