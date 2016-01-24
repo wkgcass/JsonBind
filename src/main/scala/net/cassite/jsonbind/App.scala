@@ -11,15 +11,13 @@ class App(parsers: List[Parser] = Nil, plugins: List[Plugin] = Nil) {
   val context = new AppContext(this, parsers, plugins)
 
   val nameMap = new mutable.HashMap[String, View]
-  val map = new mutable.HashMap[View, Scope]
+  val map = new mutable.HashMap[View, Scope => Unit]
 
   def bind(view: View)(init: Scope => Unit): App = {
     if (nameMap contains view.name) throw new IllegalArgumentException(s"duplicated name [$view.name]")
     view.load()
-    val scope = new Scope(null)
-    init(scope)
     nameMap(view.name) = view
-    map(view) = scope
+    map(view) = init
     this
   }
 
@@ -27,7 +25,11 @@ class App(parsers: List[Parser] = Nil, plugins: List[Plugin] = Nil) {
     if (nameMap contains name) {
       val view = nameMap(name)
       view.refresh()
-      val parsingContext = new ParsingContext(map(view), context)
+
+      val scope = new Scope(null)
+      map(view)(scope)
+
+      val parsingContext = new ParsingContext(scope, context)
       parsingContext.doNext(view.parse())
     }
     else
@@ -36,11 +38,10 @@ class App(parsers: List[Parser] = Nil, plugins: List[Plugin] = Nil) {
 }
 
 object App {
-  // TODO
   val defaultConfigurationParser = List()
   val defaultConfigurationPlugin = List()
 
-  def configure() = new App(defaultConfigurationParser, defaultConfigurationPlugin)
+  def apply() = new App(defaultConfigurationParser, defaultConfigurationPlugin)
 
   def jsonValue(any: Any): JsValue = any match {
     case s: String => new JsString(s)

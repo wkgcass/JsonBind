@@ -41,7 +41,7 @@ class TestJsonBind extends FlatSpec with Matchers {
   }
 
   "ValueParser and VariablePlugin in App, calling app.view(...)" should "fill the {{variable}} with right value" in {
-    val app = new App(List(new ValueParser), List(new VariablePlugin))
+    val app = new App(List(ValueParser), List(VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """
         |{
@@ -109,7 +109,7 @@ class TestJsonBind extends FlatSpec with Matchers {
   }
 
   "ForeachParser,ValueParser and VariablePlugin in App, calling app.view(...)" should "generate repeated values" in {
-    val app = new App(List(new ForeachParser, new ValueParser), List(new VariablePlugin))
+    val app = new App(List(ForeachParser, ValueParser), List(VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """{
         |"something":{
@@ -128,7 +128,7 @@ class TestJsonBind extends FlatSpec with Matchers {
   }
 
   "MapAssemblingParser,ValueParser and VariablePlugin in App, calling app.view(...)" should "fill the {{key}} with right value" in {
-    val app = new App(List(new MapAssemblingParser, new ValueParser), List(new VariablePlugin))
+    val app = new App(List(MapAssemblingParser, ValueParser), List(VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """
         |{
@@ -145,7 +145,7 @@ class TestJsonBind extends FlatSpec with Matchers {
   }
 
   "ForeachParser,MapAssemblingParser,ValueParser and VariablePlugin in App, calling app.view(...)" should "fill the {{key}} with right value" in {
-    val app = new App(List(new ForeachParser, new MapAssemblingParser, new ValueParser), List(new VariablePlugin))
+    val app = new App(List(ForeachParser, MapAssemblingParser, ValueParser), List(VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """{
         |"something":{
@@ -177,7 +177,7 @@ class TestJsonBind extends FlatSpec with Matchers {
   }
 
   "IfParser and VariablePlugin in App, calling app.view(...)" should "show only if the value is 'true'" in {
-    val app = new App(List(new IfParser), List(new VariablePlugin))
+    val app = new App(List(IfParser), List(VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """{
         |   "root":{
@@ -232,7 +232,7 @@ class TestJsonBind extends FlatSpec with Matchers {
   }
 
   "ValueParser and VariablePlugin,DateFormatPlugin" should "fill the date with corresponding time" in {
-    val app = new App(List(new ValueParser), List(new VariablePlugin, new DateFormatPlugin))
+    val app = new App(List(ValueParser), List(VariablePlugin, DateFormatPlugin))
     app.bind(JsValueView("test", Json.parse(
       """{
         |"time":"{{timestamp | dateformat('yyyy/m/d HH:i:s')}}"
@@ -246,7 +246,7 @@ class TestJsonBind extends FlatSpec with Matchers {
   }
 
   "IfParser,ValueParser and LogicOperatorPlugin,VariablePlugin" should "give correct boolean value" in {
-    val app = new App(List(new IfParser, new ValueParser), List(new LogicOperatorPlugin, new VariablePlugin))
+    val app = new App(List(IfParser, ValueParser), List(LogicOperatorPlugin, VariablePlugin))
     app.bind(JsValueView("test", Json.parse(
       """{
         |"==":"{{1==2}}",
@@ -283,8 +283,8 @@ class TestJsonBind extends FlatSpec with Matchers {
       )))
   }
 
-  "all parsers and all plugins" should "function properly" in {
-    val app = new App(List(new IfParser, new ForeachParser, new MapAssemblingParser, new ValueParser), List(new LogicOperatorPlugin, new VariablePlugin, new DateFormatPlugin))
+  "IfParser,ForeachParser,MapAssemblingParser,ValueParser and LogicOperatorPlugin,VariablePlugin,DateFormatPlugin" should "function properly" in {
+    val app = new App(List(IfParser, ForeachParser, MapAssemblingParser, ValueParser), List(LogicOperatorPlugin, VariablePlugin, DateFormatPlugin))
     app.bind(InputStreamView("test", classOf[TestJsonBind].getResourceAsStream("/test.json"))) {
       $scope =>
         $scope("user") = new User(1, "cass", 1450760814000L, true, 3, 2333)
@@ -322,81 +322,68 @@ class TestJsonBind extends FlatSpec with Matchers {
                 "id" -> JsNumber(1),
                 "name" -> JsString("java"),
                 "level" -> JsNumber(13),
-                "posts" -> JsArray(List(
-                  JsObject(
-                    Map(
-                      "1" -> JsObject(
-                        Map(
-                          "title" -> JsString("hello world"),
-                          "author" -> JsObject(
-                            Map(
-                              "id" -> JsNumber(2),
-                              "name" -> JsString("SGSLX")
-                            )
+                "posts" -> JsObject(
+                  Map(
+                    "1" -> JsObject(
+                      Map(
+                        "title" -> JsString("hello world"),
+                        "author" -> JsObject(
+                          Map(
+                            "id" -> JsNumber(2),
+                            "name" -> JsString("SGSLX")
                           )
                         )
                       )
-                    )),
-                  JsObject(
-                    Map(
-                      "2" -> JsObject(
-                        Map(
-                          "title" -> JsString("water"),
-                          "author" -> JsObject(
-                            Map(
-                              "id" -> JsNumber(3),
-                              "name" -> JsString("SM")
-                            )
+                    ),
+                    "2" -> JsObject(
+                      Map(
+                        "title" -> JsString("water"),
+                        "author" -> JsObject(
+                          Map(
+                            "id" -> JsNumber(3),
+                            "name" -> JsString("SM")
                           )
                         )
                       )
-                    ))
-                ))
-              )
-            ),
+                    )
+                  ))
+              )),
             JsObject(
               Map(
                 "id" -> JsNumber(2),
                 "name" -> JsString("macbook"),
                 "level" -> JsNumber(12),
-                "posts" -> JsArray(List(
-                  JsObject(
-                    Map(
-                      "4" -> JsObject(
-                        Map(
-                          "title" -> JsString("osx"),
-                          "author" -> JsObject(
-                            Map(
-                              "id" -> JsNumber(4),
-                              "name" -> JsString("timo")
-                            )
+                "posts" -> JsObject(
+                  Map(
+                    "4" -> JsObject(
+                      Map(
+                        "title" -> JsString("osx"),
+                        "author" -> JsObject(
+                          Map(
+                            "id" -> JsNumber(4),
+                            "name" -> JsString("timo")
                           )
                         )
                       )
-                    )),
-                  JsObject(
-                    Map(
-                      "5" -> JsObject(
-                        Map(
-                          "title" -> JsString("win vs osx"),
-                          "author" -> JsObject(
-                            Map(
-                              "id" -> JsNumber(5),
-                              "name" -> JsString("john")
-                            )
+                    ),
+                    "5" -> JsObject(
+                      Map(
+                        "title" -> JsString("win vs osx"),
+                        "author" -> JsObject(
+                          Map(
+                            "id" -> JsNumber(5),
+                            "name" -> JsString("john")
                           )
                         )
                       )
-                    ))
-                ))
+                    )
+                  ))
               )
             )
           ))
         )
       )
     )
-
-    println(app.view("test"))
   }
 }
 

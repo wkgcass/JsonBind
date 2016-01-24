@@ -14,10 +14,15 @@ import play.api.libs.json.{JsNumber, JsBoolean, JsString, JsValue}
  * example<br>
  * <code>"{{value}}"</code><br><code>"{{user.name}}"</code><br><code>"{{true}}"</code> would be translated into JsBoolean(true) if 'true' is not a key in $scope
  */
-class VariablePlugin extends Plugin {
+object VariablePlugin extends Plugin {
+  private val LOGGER = LoggerFactory.getLogger(getClass)
+
   override def isAssignableFrom(func: String): Boolean = !func.contains("(")
 
   override def buildFunction(func: String, context: PluginContext): (JsValue) => JsValue = {
+
+    LOGGER.debug("VariablePlugin with function : {}", func)
+
     val str = func.trim
     val v = if (str.startsWith("'") && str.endsWith("'") && str.length >= 2) {
       JsString(str.substring(1, str.length - 1))
@@ -34,8 +39,4 @@ class VariablePlugin extends Plugin {
     }
     (x: JsValue) => v
   }
-}
-
-object VariablePlugin {
-  private val LOGGER = LoggerFactory.getLogger(classOf[VariablePlugin])
 }

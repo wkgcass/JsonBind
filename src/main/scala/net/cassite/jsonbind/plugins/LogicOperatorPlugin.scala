@@ -1,6 +1,7 @@
 package net.cassite.jsonbind.plugins
 
 import net.cassite.jsonbind.{PluginContext, Plugin}
+import org.slf4j.LoggerFactory
 import play.api.libs.json.{JsBoolean, JsValue}
 
 /**
@@ -13,10 +14,15 @@ import play.api.libs.json.{JsBoolean, JsValue}
  * </code>
  * would result in <code>{"key":false}</code>
  */
-class LogicOperatorPlugin extends Plugin {
+object LogicOperatorPlugin extends Plugin {
+  private val LOGGER = LoggerFactory.getLogger(getClass)
+
   override def isAssignableFrom(func: String): Boolean = func.contains("==") || func.contains("!=") || func.contains("<>") || func.startsWith("!")
 
   override def buildFunction(func: String, context: PluginContext): (JsValue) => JsValue = {
+
+    LOGGER.debug("LogicOperatorPlugin with function : {}", func)
+
     // expressions containing == != <> should be split into 2 parts
     // and each part should be parsed to JsValue then compare
     if (func.contains("==") || func.contains("!=") || func.contains("<>")) {
@@ -25,6 +31,8 @@ class LogicOperatorPlugin extends Plugin {
       val right = func.substring(func.indexOf(spliter) + spliter.length)
       val leftContext = new PluginContext(left, context.$scope, context.appContext)
       val rightContext = new PluginContext(right, context.$scope, context.appContext)
+
+      LOGGER.debug("\t{} {} {}", left, spliter, right)
 
       (jsValue: JsValue) =>
         if (spliter == "==")
@@ -37,6 +45,9 @@ class LogicOperatorPlugin extends Plugin {
     else if (func.startsWith("!")) {
       val right = func.substring(1)
       val rightContext = new PluginContext(right, context.$scope, context.appContext)
+
+      LOGGER.debug("\t!{}", right)
+
       (jsValue: JsValue) =>
         rightContext.doNext(null) match {
           case JsBoolean(b) => JsBoolean(!b)

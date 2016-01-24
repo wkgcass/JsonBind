@@ -2,10 +2,11 @@ package net.cassite.jsonbind.parsers
 
 import net.cassite.jsonbind.{Scope, ParsingContext, Parser}
 import org.slf4j.LoggerFactory
-import play.api.libs.json.{JsArray, JsObject, JsValue}
+import play.api.libs.json.{JsString, JsArray, JsObject, JsValue}
 
 /**
  * parses foreach<br>
+ * pattern : <code>"$foreach":{"tempVariable(s) in iterator":{loop}[,"$type":"array/object"(array is default)]}</code><br>
  * example : iteration over an Iterator[_] (usually List[_])<br>
  * <code>
  * {<br>
@@ -22,13 +23,15 @@ import play.api.libs.json.{JsArray, JsObject, JsValue}
  * {<br>
  * &nbsp;&nbsp;"$foreach":{<br>
  * &nbsp;&nbsp;&nbsp;&nbsp;"(k,v) in map":{<br>
- * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"{{k}}":"{{x}}"<br>
+ * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"{{k}}":"{{v}}"<br>
  * &nbsp;&nbsp;&nbsp;&nbsp;}<br>
  * &nbsp;&nbsp;}<br>
  * }
  * </code>
  */
-class ForeachParser extends Parser {
+object ForeachParser extends Parser {
+  private val LOGGER = LoggerFactory.getLogger(getClass)
+
   override def canParse(current: JsValue): Boolean = current match {
     case JsObject(map) => (map contains "$foreach") && map.size == 1
     case _ => false
@@ -46,7 +49,12 @@ class ForeachParser extends Parser {
     val y = XinY(1).trim
     val loop = map(foreachKey)
 
-    ForeachParser.LOGGER.debug("--loop info : foreach({} in {}) {}", x, y, loop)
+    val typ = if (map contains "$type") map("$type").asInstanceOf[JsString].value else "array"
+
+    LOGGER.debug("\t{}.foreach({}=>{", Array(y, x): _*)
+    LOGGER.debug("\t\t{}", loop)
+    LOGGER.debug("\t})")
+    LOGGER.debug("\ttype = \"{}\"", typ)
 
     val seq = if (x.startsWith("(") && x.endsWith(")")) {
       val vars = x.substring(1, x.length - 1).split(",").map(_.trim)
@@ -67,10 +75,14 @@ class ForeachParser extends Parser {
         parsing.doNext(loop)
       }
     }
-    parsingContext.doNext(new JsArray(seq.toSeq))
+    parsingContext.doNext(if (typ == "array") new JsArray(seq.toSeq)
+    else if (typ == "object") new JsObject(seq.map {
+      case JsObject(m) =>
+        val key = m.keysIterator.next()
+        (key, m(key))
+      case null => (null, null)
+      case other => throw new IllegalArgumentException(other + " cannot be parsed into an object")
+    }.filter(entry => entry._1 != null && entry._2 != null).toMap)
+    else throw new UnsupportedOperationException)
   }
-}
-
-object ForeachParser {
-  private val LOGGER = LoggerFactory.getLogger(classOf[ForeachParser])
 }

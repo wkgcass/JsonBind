@@ -1,6 +1,6 @@
 package net.cassite.jsonbind.views
 
-import java.io.{InputStream, BufferedReader, Reader}
+import java.io.InputStream
 
 import net.cassite.jsonbind.View
 import play.api.libs.json.{JsValue, Json}

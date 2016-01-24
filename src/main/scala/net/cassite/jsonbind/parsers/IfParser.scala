@@ -18,7 +18,9 @@ import play.api.libs.json._
  * }
  * <code>
  */
-class IfParser extends Parser {
+object IfParser extends Parser {
+  private val LOGGER = LoggerFactory.getLogger(getClass)
+
   override def canParse(current: JsValue): Boolean = current match {
     case JsObject(map) => (map.size == 1) && (map contains "$if")
     case _ => false
@@ -27,11 +29,18 @@ class IfParser extends Parser {
   override def parse(current: JsValue, parsingContext: ParsingContext): JsValue = {
     assert(current.isInstanceOf[JsObject])
 
-    IfParser.LOGGER.debug("IfParser with JsValue:{}", current)
+    LOGGER.debug("IfParser with JsValue:{}", current)
 
     val ifMap = current.asInstanceOf[JsObject].value
     val insideIfMap = ifMap("$if").asInstanceOf[JsObject].value
     val ifKey = insideIfMap.keys.iterator.next()
+
+    LOGGER.debug("\tif({}) {", ifKey)
+    LOGGER.debug("\t\t{}", insideIfMap(ifKey))
+    LOGGER.debug("\t}else{")
+    if (insideIfMap.contains("$else")) LOGGER.debug("\t\t{}", insideIfMap("$else"))
+    LOGGER.debug("\t}")
+
     val doAppend = parsingContext.parseExpression(ifKey) match {
       case JsBoolean(b) => b
       case JsString(str) => str.toBoolean
@@ -45,8 +54,4 @@ class IfParser extends Parser {
       parsingContext.doNext(newContext.doNext(insideIfMap("$else")))
     } else null
   }
-}
-
-object IfParser {
-  private val LOGGER = LoggerFactory.getLogger(classOf[IfParser])
 }
